@@ -45,15 +45,63 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 Make sure `$GOPATH/bin` is in your PATH.
 
+## Configuration
+
+The application uses environment variables for configuration. You can set them via:
+1. `.env` file (recommended for development)
+2. System environment variables (recommended for production)
+
+### Setup .env file
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit .env with your values
+```
+
+### Available Configuration
+
+| Variable        | Description                          | Default          |
+| --------------- | ------------------------------------ | ---------------- |
+| `PORT`          | gRPC server port                     | `50051`          |
+| `APP_NAME`      | Application name                     | `GoMail API`     |
+| `APP_ENV`       | Environment (development/production) | `development`    |
+| `MAIL_HOST`     | SMTP server host                     | `smtp.gmail.com` |
+| `MAIL_PORT`     | SMTP server port                     | `587`            |
+| `MAIL_USERNAME` | SMTP username (required)             | -                |
+| `MAIL_PASSWORD` | SMTP password (required)             | -                |
+| `LOG_LEVEL`     | Logging level                        | `info`           |
+
+### Accessing Configuration in Code
+
+Configuration is loaded in `main.go` and injected into layers that need it:
+
+```go
+import "duif/internal/config"
+
+// Load configuration
+cfg, err := config.Load()
+if err != nil {
+    log.Fatal(err)
+}
+
+// Access configuration values
+fmt.Println(cfg.Server.Port)      // "50051"
+fmt.Println(cfg.Mail.Host)        // "smtp.gmail.com"
+fmt.Println(cfg.App.Name)         // "GoMail API"
+fmt.Println(cfg.IsDevelopment())  // true/false
+```
+
+See [internal/config/config.go](internal/config/config.go) for the complete configuration structure.
+
 ## Regenerating Protobuf Files
 
 Whenever you modify any `.proto` files in the `proto/` directory, regenerate the Go code:
 
 ```bash
-protoc --proto_path=. \
-  --go_out=. --go_opt=paths=source_relative \
-  --go-grpc_out=. --go-grpc_opt=paths=source_relative \
-  proto/*.proto
+protoc --proto_path=. --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/*.proto
+
 ```
 
 This will generate/update:

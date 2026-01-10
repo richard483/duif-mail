@@ -9,6 +9,7 @@ package proto
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -22,11 +23,16 @@ const (
 )
 
 type EmailRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	To            string                 `protobuf:"bytes,1,opt,name=to,proto3" json:"to,omitempty"`
-	From          string                 `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
-	Subject       string                 `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`
-	Body          string                 `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	To            string                     `protobuf:"bytes,1,opt,name=to,proto3" json:"to,omitempty"`
+	From          string                     `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	Subject       string                     `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`
+	Body          string                     `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	IsHtml        bool                       `protobuf:"varint,5,opt,name=is_html,json=isHtml,proto3" json:"is_html,omitempty"`
+	ReplyTo       string                     `protobuf:"bytes,6,opt,name=reply_to,json=replyTo,proto3" json:"reply_to,omitempty"`
+	Cc            string                     `protobuf:"bytes,7,opt,name=cc,proto3" json:"cc,omitempty"`
+	TemplateId    string                     `protobuf:"bytes,8,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	TemplateData  map[string]*structpb.Value `protobuf:"bytes,9,rep,name=template_data,json=templateData,proto3" json:"template_data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -87,6 +93,41 @@ func (x *EmailRequest) GetBody() string {
 		return x.Body
 	}
 	return ""
+}
+
+func (x *EmailRequest) GetIsHtml() bool {
+	if x != nil {
+		return x.IsHtml
+	}
+	return false
+}
+
+func (x *EmailRequest) GetReplyTo() string {
+	if x != nil {
+		return x.ReplyTo
+	}
+	return ""
+}
+
+func (x *EmailRequest) GetCc() string {
+	if x != nil {
+		return x.Cc
+	}
+	return ""
+}
+
+func (x *EmailRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *EmailRequest) GetTemplateData() map[string]*structpb.Value {
+	if x != nil {
+		return x.TemplateData
+	}
+	return nil
 }
 
 type EmailResponse struct {
@@ -385,12 +426,21 @@ var File_proto_mail_proto protoreflect.FileDescriptor
 
 const file_proto_mail_proto_rawDesc = "" +
 	"\n" +
-	"\x10proto/mail.proto\x12\x04mail\"`\n" +
+	"\x10proto/mail.proto\x12\x04mail\x1a\x1cgoogle/protobuf/struct.proto\"\xe9\x02\n" +
 	"\fEmailRequest\x12\x0e\n" +
 	"\x02to\x18\x01 \x01(\tR\x02to\x12\x12\n" +
 	"\x04from\x18\x02 \x01(\tR\x04from\x12\x18\n" +
 	"\asubject\x18\x03 \x01(\tR\asubject\x12\x12\n" +
-	"\x04body\x18\x04 \x01(\tR\x04body\"^\n" +
+	"\x04body\x18\x04 \x01(\tR\x04body\x12\x17\n" +
+	"\ais_html\x18\x05 \x01(\bR\x06isHtml\x12\x19\n" +
+	"\breply_to\x18\x06 \x01(\tR\areplyTo\x12\x0e\n" +
+	"\x02cc\x18\a \x01(\tR\x02cc\x12\x1f\n" +
+	"\vtemplate_id\x18\b \x01(\tR\n" +
+	"templateId\x12I\n" +
+	"\rtemplate_data\x18\t \x03(\v2$.mail.EmailRequest.TemplateDataEntryR\ftemplateData\x1aW\n" +
+	"\x11TemplateDataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"^\n" +
 	"\rEmailResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x19\n" +
@@ -429,7 +479,7 @@ func file_proto_mail_proto_rawDescGZIP() []byte {
 	return file_proto_mail_proto_rawDescData
 }
 
-var file_proto_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_proto_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proto_mail_proto_goTypes = []any{
 	(*EmailRequest)(nil),         // 0: mail.EmailRequest
 	(*EmailResponse)(nil),        // 1: mail.EmailResponse
@@ -437,20 +487,24 @@ var file_proto_mail_proto_goTypes = []any{
 	(*GetAllEmailsRequest)(nil),  // 3: mail.GetAllEmailsRequest
 	(*Email)(nil),                // 4: mail.Email
 	(*GetAllEmailsResponse)(nil), // 5: mail.GetAllEmailsResponse
+	nil,                          // 6: mail.EmailRequest.TemplateDataEntry
+	(*structpb.Value)(nil),       // 7: google.protobuf.Value
 }
 var file_proto_mail_proto_depIdxs = []int32{
-	4, // 0: mail.GetAllEmailsResponse.emails:type_name -> mail.Email
-	0, // 1: mail.MailService.SendEmail:input_type -> mail.EmailRequest
-	2, // 2: mail.MailService.GetEmail:input_type -> mail.GetEmailRequest
-	3, // 3: mail.MailService.GetAllEmails:input_type -> mail.GetAllEmailsRequest
-	1, // 4: mail.MailService.SendEmail:output_type -> mail.EmailResponse
-	4, // 5: mail.MailService.GetEmail:output_type -> mail.Email
-	5, // 6: mail.MailService.GetAllEmails:output_type -> mail.GetAllEmailsResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	6, // 0: mail.EmailRequest.template_data:type_name -> mail.EmailRequest.TemplateDataEntry
+	4, // 1: mail.GetAllEmailsResponse.emails:type_name -> mail.Email
+	7, // 2: mail.EmailRequest.TemplateDataEntry.value:type_name -> google.protobuf.Value
+	0, // 3: mail.MailService.SendEmail:input_type -> mail.EmailRequest
+	2, // 4: mail.MailService.GetEmail:input_type -> mail.GetEmailRequest
+	3, // 5: mail.MailService.GetAllEmails:input_type -> mail.GetAllEmailsRequest
+	1, // 6: mail.MailService.SendEmail:output_type -> mail.EmailResponse
+	4, // 7: mail.MailService.GetEmail:output_type -> mail.Email
+	5, // 8: mail.MailService.GetAllEmails:output_type -> mail.GetAllEmailsResponse
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_mail_proto_init() }
@@ -464,7 +518,7 @@ func file_proto_mail_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_mail_proto_rawDesc), len(file_proto_mail_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

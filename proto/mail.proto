@@ -4,6 +4,8 @@ package mail;
 
 option go_package = "duif/proto";
 
+import "google/protobuf/struct.proto";
+
 service MailService {
     rpc SendEmail (EmailRequest) returns (EmailResponse);
     rpc GetEmail (GetEmailRequest) returns (Email);
@@ -15,6 +17,11 @@ message EmailRequest {
     string from = 2;
     string subject = 3;
     string body = 4;
+    bool is_html = 5;
+    string reply_to = 6;
+    string cc = 7;
+    string template_id = 8;
+    map<string, google.protobuf.Value> template_data = 9;
 }
 
 message EmailResponse {

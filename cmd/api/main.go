@@ -1,6 +1,7 @@
 package main
 
 import (
+	"duif/internal/config"
 	"duif/internal/repository"
 	"duif/internal/server"
 	"duif/internal/usecase"
@@ -11,27 +12,23 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 func main() {
-	// Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using environment variables")
+	// Initialize global configuration (call once at startup)
+	if err := config.Init(); err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Get port from environment or use default
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "50051"
-	}
+	// Access config globally
+	cfg := config.Get()
 
 	// Create TCP listener
-	lis, err := net.Listen("tcp", ":"+port)
+	lis, err := net.Listen("tcp", ":"+cfg.Server.Port)
 	if err != nil {
-		log.Fatalf("Failed to listen on port %s: %v", port, err)
+		log.Fatalf("Failed to listen on port %s: %v", cfg.Server.Port, err)
 	}
 
 	// Initialize layers
@@ -56,11 +53,8 @@ func main() {
 	}()
 
 	// Start server
-	appName := os.Getenv("APP_NAME")
-	if appName == "" {
-		appName = "GoMail API"
-	}
-	log.Printf("🚀 %s starting on port %s (env: %s)", appName, port, os.Getenv("APP_ENV"))
+	log.Printf("🚀 %s starting on port %s (env: %s)", cfg.App.Name, cfg.Server.Port, cfg.App.Env)
+	log.Printf("📧 Mail configured: %s:%d (user: %s)", cfg.Mail.Host, cfg.Mail.Port, cfg.Mail.Username)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}

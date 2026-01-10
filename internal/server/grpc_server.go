@@ -22,12 +22,26 @@ func NewGRPCServer(mailService domain.MailService) *GRPCServer {
 
 // SendEmail handles the SendEmail RPC
 func (s *GRPCServer) SendEmail(ctx context.Context, req *pb.EmailRequest) (*pb.EmailResponse, error) {
+	templateData := make(map[string]interface{}, len(req.TemplateData))
+	for key, value := range req.TemplateData {
+		if value == nil {
+			templateData[key] = nil
+			continue
+		}
+		templateData[key] = value.AsInterface()
+	}
+
 	// Convert protobuf request to domain request
 	domainReq := &domain.SendEmailRequest{
-		To:      req.To,
-		From:    req.From,
-		Subject: req.Subject,
-		Body:    req.Body,
+		To:           req.To,
+		From:         req.From,
+		Subject:      req.Subject,
+		Body:         req.Body,
+		IsHTML:       req.IsHtml,
+		ReplyTo:      req.ReplyTo,
+		Cc:           req.Cc,
+		TemplateId:   req.TemplateId,
+		TemplateData: templateData,
 	}
 
 	// Call use case
