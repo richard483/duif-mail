@@ -65,3 +65,4 @@ Status: `Done`
 - [x] Added `ListTemplates` gRPC endpoint (UUID-based templates).
 - [x] Confirmed `GetAllEmails` returns all statuses (`sent`, `failed`, `pending`).
 - [x] Added send-log persistence for every send attempt (success and failure).
+- [x] Added `Jenkinsfile` for `KubePipeline` deployment configuration.
