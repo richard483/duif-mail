@@ -17,9 +17,10 @@ var (
 
 // Config holds all application configuration
 type Config struct {
-	Server ServerConfig
-	Mail   MailConfig
-	App    AppConfig
+	Server  ServerConfig
+	Mail    MailConfig
+	App     AppConfig
+	Storage StorageConfig
 }
 
 // ServerConfig holds server-related configuration
@@ -40,6 +41,12 @@ type AppConfig struct {
 	Name     string
 	Env      string
 	LogLevel string
+}
+
+// StorageConfig holds data storage configuration.
+type StorageConfig struct {
+	Driver string
+	DSN    string
 }
 
 // Init initializes the global config instance
@@ -64,6 +71,10 @@ func Init() error {
 				Name:     getEnv("APP_NAME", "GoMail API"),
 				Env:      getEnv("APP_ENV", "development"),
 				LogLevel: getEnv("LOG_LEVEL", "info"),
+			},
+			Storage: StorageConfig{
+				Driver: getEnv("STORAGE_DRIVER", "memory"),
+				DSN:    getEnv("DATABASE_URL", ""),
 			},
 		}
 
@@ -103,6 +114,10 @@ func Load() (*Config, error) {
 			Env:      getEnv("APP_ENV", "development"),
 			LogLevel: getEnv("LOG_LEVEL", "info"),
 		},
+		Storage: StorageConfig{
+			Driver: getEnv("STORAGE_DRIVER", "memory"),
+			DSN:    getEnv("DATABASE_URL", ""),
+		},
 	}
 
 	// Validate required fields
@@ -120,6 +135,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Mail.Password == "" {
 		return fmt.Errorf("MAIL_PASSWORD is required")
+	}
+	if c.Storage.Driver == "postgres" && c.Storage.DSN == "" {
+		return fmt.Errorf("DATABASE_URL is required when STORAGE_DRIVER=postgres")
 	}
 	return nil
 }

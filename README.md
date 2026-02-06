@@ -67,6 +67,8 @@ cp .env.example .env
 | `PORT`          | gRPC server port                     | `50051`          |
 | `APP_NAME`      | Application name                     | `GoMail API`     |
 | `APP_ENV`       | Environment (development/production) | `development`    |
+| `STORAGE_DRIVER`| Storage backend (`memory`/`postgres`) | `memory`        |
+| `DATABASE_URL`  | PostgreSQL DSN (required for postgres) | -              |
 | `MAIL_HOST`     | SMTP server host                     | `smtp.gmail.com` |
 | `MAIL_PORT`     | SMTP server port                     | `587`            |
 | `MAIL_USERNAME` | SMTP username (required)             | -                |
@@ -124,6 +126,81 @@ go build -o gomail.exe cmd/api/main.go
 
 The gRPC server will start on `localhost:50051`
 
+### Storage Driver
+
+By default, the app uses in-memory storage (`STORAGE_DRIVER=memory`).
+
+To use PostgreSQL:
+1. Set `STORAGE_DRIVER=postgres`
+2. Set `DATABASE_URL` (example: `postgres://postgres:postgres@localhost:5432/gomail?sslmode=disable`)
+3. Run SQL files in order:
+   - `db/001_init.sql`
+   - `db/002_seed.sql`
+
+### PostgreSQL Setup (psql Example)
+
+```bash
+# create database
+psql -U postgres -c "CREATE DATABASE gomail;"
+
+# apply schema and seed
+psql "postgres://postgres:postgres@localhost:5432/gomail?sslmode=disable" -f db/001_init.sql
+psql "postgres://postgres:postgres@localhost:5432/gomail?sslmode=disable" -f db/002_seed.sql
+```
+
+### Template IDs (UUID)
+
+Current seeded templates:
+- `9f1b5f8b-9bb2-4a8e-9b8f-2dc92f9c0f11` (`Welcome`)
+- `0b74f6d5-0f9f-4d26-9f90-90a43d4d4f22` (`Graduation Announcement`)
+
+Use template by sending `template_id` and `template_data` in `SendEmail`.
+
+```bash
+grpcurl -plaintext -d '{
+  "to": "recipient@example.com",
+  "from": "sender@example.com",
+  "subject": "",
+  "template_id": "9f1b5f8b-9bb2-4a8e-9b8f-2dc92f9c0f11",
+  "template_data": {
+    "Name": "Nico",
+    "Message": "Welcome aboard"
+  }
+}' localhost:50051 mail.MailService/SendEmail
+```
+
+### Template Lifecycle
+
+- Template source of truth is database table `email_templates`.
+- Update template safely with SQL:
+
+```sql
+UPDATE email_templates
+SET subject = 'New Subject', body = '<h1>Hello {{.Name}}</h1>', updated_at = NOW()
+WHERE id = '9f1b5f8b-9bb2-4a8e-9b8f-2dc92f9c0f11';
+```
+- Application uses template body at send time and records send outcomes in `email_send_logs`.
+
+## Running with Docker
+
+```bash
+# Build image
+docker build -t gomail:local .
+
+# Run container (memory storage)
+docker run --rm -p 50051:50051 --env-file .env gomail:local
+```
+
+For PostgreSQL, include `STORAGE_DRIVER=postgres` and `DATABASE_URL` in your `.env`.
+
+## Health Check
+
+gRPC health service is enabled. You can check readiness:
+
+```bash
+grpcurl -plaintext localhost:50051 grpc.health.v1.Health/Check
+```
+
 ## Testing the gRPC API
 
 ### Using grpcurl
@@ -150,6 +227,9 @@ grpcurl -plaintext -d '{}' localhost:50051 mail.MailService/GetAllEmails
 
 # Get email by ID
 grpcurl -plaintext -d '{"id": "YOUR-EMAIL-ID"}' localhost:50051 mail.MailService/GetEmail
+
+# List templates (UUID IDs)
+grpcurl -plaintext -d '{}' localhost:50051 mail.MailService/ListTemplates
 ```
 
 ### Using Go Client
@@ -214,7 +294,7 @@ Sends a new email
 ```
 
 ### GetAllEmails
-Retrieves all emails
+Retrieves all emails, including `sent`, `failed`, and `pending` statuses.
 
 **Request:**
 ```protobuf
@@ -236,6 +316,28 @@ Retrieves a specific email by ID
 ```protobuf
 {
   "id": "email-uuid"
+}
+```
+
+### ListTemplates
+Retrieves available templates (UUID-based IDs).
+
+**Request:**
+```protobuf
+{}
+```
+
+**Response:**
+```protobuf
+{
+  "templates": [
+    {
+      "id": "9f1b5f8b-9bb2-4a8e-9b8f-2dc92f9c0f11",
+      "name": "Welcome",
+      "subject": "Welcome!"
+    }
+  ],
+  "count": 2
 }
 ```
 

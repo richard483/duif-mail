@@ -5,4 +5,5 @@ type MailService interface {
 	SendEmail(req *SendEmailRequest) (*SendEmailResponse, error)
 	GetEmail(id string) (*Email, error)
 	GetAllEmails() ([]*Email, error)
+	GetTemplates() ([]*EmailTemplate, error)
 }

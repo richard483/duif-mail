@@ -2,6 +2,7 @@ package main
 
 import (
 	"duif/internal/config"
+	"duif/internal/domain"
 	"duif/internal/repository"
 	"duif/internal/server"
 	"duif/internal/usecase"
@@ -10,9 +11,12 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -32,7 +36,27 @@ func main() {
 	}
 
 	// Initialize layers
-	emailRepo := repository.NewInMemoryEmailRepository()
+	var emailRepo domain.EmailRepository
+	var shutdown func()
+
+	switch strings.ToLower(cfg.Storage.Driver) {
+	case "postgres":
+		pgRepo, err := repository.NewPostgresRepository(cfg.Storage.DSN)
+		if err != nil {
+			log.Fatalf("Failed to initialize postgres repository: %v", err)
+		}
+		emailRepo = pgRepo
+		shutdown = func() {
+			if err := pgRepo.Close(); err != nil {
+				log.Printf("Failed closing postgres connection: %v", err)
+			}
+		}
+	default:
+		emailRepo = repository.NewInMemoryEmailRepository()
+		shutdown = func() {}
+	}
+	defer shutdown()
+
 	mailUseCase := usecase.NewMailUseCase(emailRepo)
 	mailServer := server.NewGRPCServer(mailUseCase)
 
@@ -40,8 +64,15 @@ func main() {
 	grpcServer := grpc.NewServer()
 	pb.RegisterMailServiceServer(grpcServer, mailServer)
 
-	// Register reflection service for tools like grpcurl
-	reflection.Register(grpcServer)
+	// Register health service for runtime readiness checks.
+	healthServer := health.NewServer()
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(grpcServer, healthServer)
+
+	// Register reflection only in development mode.
+	if cfg.IsDevelopment() {
+		reflection.Register(grpcServer)
+	}
 
 	// Handle graceful shutdown
 	go func() {
@@ -53,8 +84,9 @@ func main() {
 	}()
 
 	// Start server
-	log.Printf("🚀 %s starting on port %s (env: %s)", cfg.App.Name, cfg.Server.Port, cfg.App.Env)
-	log.Printf("📧 Mail configured: %s:%d (user: %s)", cfg.Mail.Host, cfg.Mail.Port, cfg.Mail.Username)
+	log.Printf("%s starting on port %s (env: %s)", cfg.App.Name, cfg.Server.Port, cfg.App.Env)
+	log.Printf("Mail configured: %s:%d", cfg.Mail.Host, cfg.Mail.Port)
+	log.Printf("Storage driver: %s", cfg.Storage.Driver)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
