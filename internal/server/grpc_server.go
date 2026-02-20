@@ -5,6 +5,8 @@ import (
 	"duif/internal/domain"
 	pb "duif/proto"
 	"errors"
+	"fmt"
+	"net"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -50,10 +52,7 @@ func (s *GRPCServer) SendEmail(ctx context.Context, req *pb.EmailRequest) (*pb.E
 	// Call use case
 	resp, err := s.mailService.SendEmail(domainReq)
 	if err != nil {
-		if errors.Is(err, domain.ErrInvalidInput) {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		}
-		return nil, status.Error(codes.Internal, "failed to send email")
+		return nil, mapSendEmailError(err)
 	}
 
 	// Convert domain response to protobuf response
@@ -62,6 +61,22 @@ func (s *GRPCServer) SendEmail(ctx context.Context, req *pb.EmailRequest) (*pb.E
 		Message: resp.Message,
 		EmailId: resp.EmailID,
 	}, nil
+}
+
+func mapSendEmailError(err error) error {
+	if errors.Is(err, domain.ErrInvalidInput) {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	if errors.Is(err, domain.ErrNotFound) {
+		return status.Error(codes.NotFound, err.Error())
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return status.Error(codes.Unavailable, fmt.Sprintf("smtp/network error: %v", err))
+	}
+
+	return status.Error(codes.Internal, fmt.Sprintf("failed to send email: %v", err))
 }
 
 // GetEmail handles the GetEmail RPC

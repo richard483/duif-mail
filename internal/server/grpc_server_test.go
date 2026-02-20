@@ -5,6 +5,7 @@ import (
 	"duif/internal/domain"
 	pb "duif/proto"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -128,6 +129,46 @@ func TestSendEmail_InternalError(t *testing.T) {
 	}
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("expected Internal, got %v", status.Code(err))
+	}
+}
+
+func TestSendEmail_ReturnsNotFoundStatus(t *testing.T) {
+	svc := &stubMailService{
+		sendFn: func(req *domain.SendEmailRequest) (*domain.SendEmailResponse, error) {
+			return nil, fmt.Errorf("%w: template not found", domain.ErrNotFound)
+		},
+		getFn:       func(id string) (*domain.Email, error) { return nil, nil },
+		getAllFn:    func() ([]*domain.Email, error) { return nil, nil },
+		templatesFn: func() ([]*domain.EmailTemplate, error) { return nil, nil },
+	}
+	server := NewGRPCServer(svc)
+
+	_, err := server.SendEmail(context.Background(), &pb.EmailRequest{})
+	if err == nil {
+		t.Fatal("expected gRPC error")
+	}
+	if status.Code(err) != codes.NotFound {
+		t.Fatalf("expected NotFound, got %v", status.Code(err))
+	}
+}
+
+func TestSendEmail_ReturnsUnavailableStatusForNetworkError(t *testing.T) {
+	svc := &stubMailService{
+		sendFn: func(req *domain.SendEmailRequest) (*domain.SendEmailResponse, error) {
+			return nil, &net.OpError{Op: "dial", Net: "tcp", Err: fmt.Errorf("connection refused")}
+		},
+		getFn:       func(id string) (*domain.Email, error) { return nil, nil },
+		getAllFn:    func() ([]*domain.Email, error) { return nil, nil },
+		templatesFn: func() ([]*domain.EmailTemplate, error) { return nil, nil },
+	}
+	server := NewGRPCServer(svc)
+
+	_, err := server.SendEmail(context.Background(), &pb.EmailRequest{})
+	if err == nil {
+		t.Fatal("expected gRPC error")
+	}
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected Unavailable, got %v", status.Code(err))
 	}
 }
 
