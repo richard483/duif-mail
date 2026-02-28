@@ -10,6 +10,7 @@ service MailService {
     rpc SendEmail (EmailRequest) returns (EmailResponse);
     rpc GetEmail (GetEmailRequest) returns (Email);
     rpc GetAllEmails (GetAllEmailsRequest) returns (GetAllEmailsResponse);
+    rpc ListTemplates (ListTemplatesRequest) returns (ListTemplatesResponse);
 }
 
 message EmailRequest {
@@ -49,5 +50,21 @@ message Email {
 
 message GetAllEmailsResponse {
     repeated Email emails = 1;
+    int32 count = 2;
+}
+
+message ListTemplatesRequest {}
+
+message Template {
+    string id = 1;
+    string name = 2;
+    string subject = 3;
+    bool is_html = 4;
+    string created_at = 5;
+    string updated_at = 6;
+}
+
+message ListTemplatesResponse {
+    repeated Template templates = 1;
     int32 count = 2;
 }
